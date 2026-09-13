@@ -2,28 +2,18 @@
 
 Tamil script upload or paste செய்து real MP4 AI video உருவாக்கும் Next.js app.
 
-## Features
+Features
+Tamil voice, presenter/avatar, automatic scenes, Tamil subtitles, 9:16 Reels or 16:9 YouTube, 15 to 120 second duration, MP4 preview/download, and My Videos history.
 
-- Tamil voice and presenter/avatar instructions
-- - Automatic scenes, visuals, and Tamil subtitles
-  - - 9:16 Reels/Shorts or 16:9 YouTube
-    - - 15-120 second duration and optional HeyGen avatar ID
-      - - MP4 preview/download and local My Videos history
-        - - Demo mode without a token
-         
-          - ## Setup
-         
-          - ```bash
-            npm install
-            npm run dev
-            ```
+Setup
 
-            Create `.env.local` in the project root with your private token:
+npm install
+npm run dev
 
-            ```env
-            REPLICATE_API_TOKEN=r8_your_real_token_here
-            ```
+Create .env.local in the project root. Keep the real token only in this file:
 
-            The model is fixed in server code as `heygen/video-agent`. Never commit `.env.local`; `.gitignore` keeps `.env*` ignored while allowing `.env.example`.
+REPLICATE_API_TOKEN=r8_your_real_token_here
 
-            Open http://localhost:3000. Real generation requires a Replicate account and credits. Without a token, local demo mode is used.
+The server code uses the fixed model heygen/video-agent. Never commit .env.local; .gitignore keeps env files private.
+
+Without a token, the app runs local demo mode. With a valid Replicate token and credits, it creates a real AI video.
