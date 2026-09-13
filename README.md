@@ -1,83 +1,29 @@
-# தமிழ் AI Video Studio
+# Tamil AI Video Studio
 
-Script `.txt` upload/paste செய்து AI video உருவாக்கும் Next.js website.
+Tamil script upload or paste செய்து real MP4 AI video உருவாக்கும் Next.js app.
 
-## முக்கிய அம்சங்கள்
+## Features
 
-- தமிழ் UI
-- `.txt` script upload
-- Script textarea
-- AI video generation
-- Generation status polling
-- Video preview
-- Video output link
-- Local video history database in `data/videos.json`
-- Demo mode works without an API key
-- Delete saved video records
-- 9:16 Reels/Shorts or 16:9 YouTube output
-- Tamil subtitle and presenter instructions sent to the video model
-- 15–120 second duration and optional HeyGen avatar ID
-- API token browser-ல் expose ஆகாது
+- Tamil voice and presenter/avatar instructions
+- - Automatic scenes, visuals, and Tamil subtitles
+  - - 9:16 Reels/Shorts or 16:9 YouTube
+    - - 15-120 second duration and optional HeyGen avatar ID
+      - - MP4 preview/download and local My Videos history
+        - - Demo mode without a token
+         
+          - ## Setup
+         
+          - ```bash
+            npm install
+            npm run dev
+            ```
 
-## 1. Requirements
+            Create `.env.local` in the project root with your private token:
 
-- Node.js 20+
-- Replicate account + API token
+            ```env
+            REPLICATE_API_TOKEN=r8_your_real_token_here
+            ```
 
-Replicate-ல் `heygen/video-agent` default model பயன்படுத்தப்படுகிறது. இது prompt-ல் இருந்து complete MP4 video, presenter, voiceover, visuals, editing மற்றும் subtitles உருவாக்கும். வேறு compatible Replicate model பயன்படுத்த `REPLICATE_VIDEO_MODEL` மாற்றலாம்.
+            The model is fixed in server code as `heygen/video-agent`. Never commit `.env.local`; `.gitignore` keeps `.env*` ignored while allowing `.env.example`.
 
-## 2. Install
-
-```bash
-npm install
-```
-
-Without `REPLICATE_API_TOKEN`, the app runs in free demo mode and saves test jobs locally. Add the token to generate real videos. Real generation consumes the configured provider/model credits; "unlimited" self-hosting depends on your computer/GPU and a compatible local model, so it cannot be promised by the web app alone.
-
-## 3. Environment
-
-`.env.example` ஐ `.env.local` என்று copy செய்து:
-
-```env
-REPLICATE_API_TOKEN=r8_your_token_here
-```
-
-உங்கள் Replicate API token-ஐ மட்டும் server environment-ல் வையுங்கள்.
-
-## 4. Run
-
-```bash
-npm run dev
-```
-
-பிறகு:
-
-```text
-http://localhost:3000
-```
-
-## 5. Production build
-
-```bash
-npm run build
-npm start
-```
-
-## Production notes
-
-இந்த starter demo video URL-ஐ database-ல் save செய்யாது. Production version-ல்:
-
-- Login / signup
-- User dashboard
-- PostgreSQL
-- Object storage (S3/R2)
-- Job queue
-- Webhook-based status updates
-- Usage credits
-- Payment integration
-- Rate limiting
-- Admin dashboard
-- Custom domain
-- Terms / privacy pages
-
-போன்றவை சேர்க்க வேண்டும்.
+            Open http://localhost:3000. Real generation requires a Replicate account and credits. Without a token, local demo mode is used.
