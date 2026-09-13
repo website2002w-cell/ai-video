@@ -3,6 +3,7 @@ import { getVideo, saveVideo, updateVideo } from "../../../lib/video-store";
 
 const API = "https://api.replicate.com/v1";
 const MODEL = process.env.REPLICATE_VIDEO_MODEL || "heygen/video-agent";
+const ASPECT_RATIOS = new Set(["9:16", "16:9"]);
 
 function authHeaders() {
   const token = process.env.REPLICATE_API_TOKEN;
@@ -24,7 +25,7 @@ export async function POST(request) {
       subtitles = true
     } = await request.json();
 
-    if (!script || typeof script !== "string") {
+    if (!script || typeof script !== "string" || !script.trim()) {
       return NextResponse.json({ error: "Script is required." }, { status: 400 });
     }
 
@@ -33,6 +34,10 @@ export async function POST(request) {
         { error: "Script மிக நீளமாக உள்ளது. 30,000 characters-க்கு குறைக்கவும்." },
         { status: 400 }
       );
+    }
+
+    if (!ASPECT_RATIOS.has(aspectRatio)) {
+      return NextResponse.json({ error: "Aspect ratio must be 9:16 or 16:9." }, { status: 400 });
     }
 
     const createdAt = new Date().toISOString();
@@ -88,6 +93,10 @@ export async function POST(request) {
       );
     }
 
+    if (!data.id) {
+      return NextResponse.json({ error: "Replicate did not return a prediction id." }, { status: 502 });
+    }
+
     await saveVideo({ ...record, id: data.id, status: data.status });
     return NextResponse.json({ id: data.id, status: data.status });
   } catch (error) {
@@ -135,6 +144,14 @@ export async function GET(request) {
       } else if (data.output?.url) {
         videoUrl = data.output.url;
       }
+    }
+
+    if (data.status === "succeeded" && !videoUrl) {
+      await updateVideo(id, { status: "failed", error: "Provider completed without returning an MP4 URL." });
+      return NextResponse.json(
+        { error: "AI provider completed the job but did not return an MP4 URL." },
+        { status: 502 }
+      );
     }
 
     await updateVideo(id, { status: data.status, videoUrl });
