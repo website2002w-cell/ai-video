@@ -1,20 +1,11 @@
 import { NextResponse } from "next/server";
+import { createVideo, getVideoStatus } from "../../../lib/video-provider";
 import { getVideo, saveVideo, updateVideo } from "../../../lib/video-store";
 
-const API = "https://api.replicate.com/v1";
-const MODEL = process.env.REPLICATE_VIDEO_MODEL || "heygen/video-agent";
 const ASPECT_RATIOS = new Set(["9:16", "16:9"]);
 const DURATIONS = new Set([15, 30, 60, 90, 120]);
-export const runtime = "nodejs";
 
-function authHeaders() {
-  const token = process.env.REPLICATE_API_TOKEN;
-  if (!token) throw new Error("REPLICATE_API_TOKEN is not configured.");
-  return {
-    Authorization: `Bearer ${token}`,
-    "Content-Type": "application/json"
-  };
-}
+export const runtime = "nodejs";
 
 export async function POST(request) {
   try {
@@ -32,14 +23,9 @@ export async function POST(request) {
     if (!script || typeof script !== "string" || !script.trim()) {
       return NextResponse.json({ error: "Script is required." }, { status: 400 });
     }
-
     if (script.length > 30000) {
-      return NextResponse.json(
-        { error: "Script மிக நீளமாக உள்ளது. 30,000 characters-க்கு குறைக்கவும்." },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Script மிக நீளமாக உள்ளது. 30,000 characters-க்கு குறைக்கவும்." }, { status: 400 });
     }
-
     if (!ASPECT_RATIOS.has(aspectRatio)) {
       return NextResponse.json({ error: "Aspect ratio must be 9:16 or 16:9." }, { status: 400 });
     }
@@ -50,9 +36,8 @@ export async function POST(request) {
     }
 
     const createdAt = new Date().toISOString();
-    const id = `video_${Date.now()}`;
     const record = {
-      id,
+      id: `video_${Date.now()}`,
       script: script.trim(),
       voice: voice || "தமிழ் பெண் குரல்",
       presenter: presenter || "தமிழ் பெண்",
@@ -67,120 +52,68 @@ export async function POST(request) {
       updatedAt: createdAt
     };
 
-    if (!process.env.REPLICATE_API_TOKEN) {
-      await saveVideo({ ...record, status: "succeeded", demo: true });
-      return NextResponse.json({ id, status: "succeeded", demo: true });
-    }
-
-    // The video-agent model can create a complete video from a text prompt.
-    // We explicitly tell it to preserve the supplied Tamil script as narration/content.
     const prompt = [
       "Create a finished MP4 video, not a storyboard or image sequence.",
-      "Use the following exact Tamil script as the narration and preserve its meaning.",
-      `Narration: ${record.voice}. Presenter/avatar: ${record.presenter}.`,
-      `Visual style: ${record.visualStyle}. Output aspect ratio: ${record.aspectRatio}.`,
-      `Target duration: ${record.duration} seconds.`,
-      record.subtitles
-        ? "Add accurate Tamil subtitles synchronized to the narration."
-        : "Do not add subtitles.",
+      "Use the exact Tamil script as narration and preserve its meaning.",
+      `Natural Tamil narration: ${record.voice}. Presenter/avatar: ${record.presenter}.`,
+      `Visual style: ${record.visualStyle}. Target duration: ${record.duration} seconds.`,
+      `Output aspect ratio: ${record.aspectRatio}.`,
+      record.subtitles ? "Add accurate synchronized Tamil subtitles." : "Do not add subtitles.",
       "Automatically select relevant images, scenes, transitions, and background music.",
-      "Render a polished social-media-ready video with natural Tamil pronunciation.",
+      "Render a polished social-media-ready video.",
       "",
       "TAMIL SCRIPT:",
-      script.trim()
+      record.script
     ].join("\n");
 
-    const input = { prompt };
-    input.orientation = record.aspectRatio === "16:9" ? "landscape" : "portrait";
-    input.duration_sec = record.duration;
+    const input = {
+      prompt,
+      orientation: record.aspectRatio === "16:9" ? "landscape" : "portrait",
+      duration_sec: record.duration
+    };
     if (record.avatarId) input.avatar_id = record.avatarId;
 
-    const response = await fetch(`${API}/models/${MODEL}/predictions`, {
-      method: "POST",
-      headers: authHeaders(),
-      body: JSON.stringify({ input })
+    const result = await createVideo(input);
+    await saveVideo({
+      ...record,
+      id: result.id,
+      provider: result.provider,
+      status: result.status,
+      videoUrl: result.videoUrl || "",
+      demo: result.provider === "demo"
     });
 
-    const data = await response.json();
-
-    if (!response.ok) {
-      return NextResponse.json(
-        { error: data.detail || data.error || "Replicate API error." },
-        { status: response.status }
-      );
-    }
-
-    if (!data.id) {
-      return NextResponse.json({ error: "Replicate did not return a prediction id." }, { status: 502 });
-    }
-
-    await saveVideo({ ...record, id: data.id, status: data.status });
-    return NextResponse.json({ id: data.id, status: data.status });
+    return NextResponse.json({
+      id: result.id,
+      status: result.status,
+      provider: result.provider,
+      demo: result.provider === "demo"
+    });
   } catch (error) {
-    return NextResponse.json(
-      { error: error.message || "Server error." },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: error.message || "Server error." }, { status: 500 });
   }
 }
 
 export async function GET(request) {
   try {
     const id = new URL(request.url).searchParams.get("id");
-
-    if (!id) {
-      return NextResponse.json({ error: "Prediction id is required." }, { status: 400 });
-    }
+    if (!id) return NextResponse.json({ error: "Prediction id is required." }, { status: 400 });
 
     const storedVideo = await getVideo(id);
-    if (storedVideo?.demo) {
-      return NextResponse.json({ id, status: storedVideo.status, videoUrl: "" });
-    }
+    if (!storedVideo) return NextResponse.json({ error: "Video job not found." }, { status: 404 });
+    if (storedVideo.demo) return NextResponse.json({ id, status: storedVideo.status, videoUrl: "" });
 
-    const response = await fetch(`${API}/predictions/${encodeURIComponent(id)}`, {
-      headers: authHeaders(),
-      cache: "no-store"
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      return NextResponse.json(
-        { error: data.detail || data.error || "Status API error." },
-        { status: response.status }
-      );
-    }
-
-    let videoUrl = "";
-
-    if (data.status === "succeeded") {
-      if (typeof data.output === "string") {
-        videoUrl = data.output;
-      } else if (Array.isArray(data.output) && data.output.length) {
-        videoUrl = data.output[0];
-      } else if (data.output?.url) {
-        videoUrl = data.output.url;
-      }
-    }
+    const data = await getVideoStatus(storedVideo.provider, id);
+    const videoUrl = data.videoUrl || "";
 
     if (data.status === "succeeded" && !videoUrl) {
       await updateVideo(id, { status: "failed", error: "Provider completed without returning an MP4 URL." });
-      return NextResponse.json(
-        { error: "AI provider completed the job but did not return an MP4 URL." },
-        { status: 502 }
-      );
+      return NextResponse.json({ error: "AI provider completed without returning an MP4 URL." }, { status: 502 });
     }
 
-    await updateVideo(id, { status: data.status, videoUrl });
-    return NextResponse.json({
-      id: data.id,
-      status: data.status,
-      videoUrl
-    });
+    await updateVideo(id, { status: data.status, videoUrl, error: data.error || "" });
+    return NextResponse.json({ id, status: data.status, videoUrl, error: data.error || "" });
   } catch (error) {
-    return NextResponse.json(
-      { error: error.message || "Server error." },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: error.message || "Server error." }, { status: 500 });
   }
 }
