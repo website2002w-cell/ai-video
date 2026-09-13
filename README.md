@@ -14,6 +14,8 @@ Script `.txt` upload/paste செய்து AI video உருவாக்க�
 - Local video history database in `data/videos.json`
 - Demo mode works without an API key
 - Delete saved video records
+- 9:16 Reels/Shorts or 16:9 YouTube output
+- Tamil subtitle and presenter instructions sent to the video model
 - API token browser-ல் expose ஆகாது
 
 ## 1. Requirements
@@ -21,7 +23,7 @@ Script `.txt` upload/paste செய்து AI video உருவாக்க�
 - Node.js 20+
 - Replicate account + API token
 
-Replicate official models-ல் `heygen/video-agent` பயன்படுத்தப்படுகிறது. இது text prompt-ல் இருந்து script, avatar/presenter, voiceover, visuals மற்றும் editing உடன் complete video உருவாக்கும் model.
+Replicate-ல் `heygen/video-agent` default model பயன்படுத்தப்படுகிறது. இது prompt-ல் இருந்து complete MP4 video, presenter, voiceover, visuals, editing மற்றும் subtitles உருவாக்கும். வேறு compatible Replicate model பயன்படுத்த `REPLICATE_VIDEO_MODEL` மாற்றலாம்.
 
 ## 2. Install
 
@@ -29,7 +31,7 @@ Replicate official models-ல் `heygen/video-agent` பயன்படுத�
 npm install
 ```
 
-Without `REPLICATE_API_TOKEN`, the app runs in free demo mode and saves test jobs locally. Add the token to generate real videos.
+Without `REPLICATE_API_TOKEN`, the app runs in free demo mode and saves test jobs locally. Add the token to generate real videos. Real generation consumes the configured provider/model credits; "unlimited" self-hosting depends on your computer/GPU and a compatible local model, so it cannot be promised by the web app alone.
 
 ## 3. Environment
 
