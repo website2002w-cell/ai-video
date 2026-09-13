@@ -11,6 +11,8 @@ export default function Home() {
   const [visualStyle, setVisualStyle] = useState("நவீன");
   const [aspectRatio, setAspectRatio] = useState("9:16");
   const [subtitles, setSubtitles] = useState(true);
+  const [duration, setDuration] = useState(30);
+  const [avatarId, setAvatarId] = useState("");
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
@@ -85,7 +87,7 @@ export default function Home() {
       const createRes = await fetch("/api/video", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ script, voice, presenter, visualStyle, aspectRatio, subtitles })
+        body: JSON.stringify({ script, voice, presenter, visualStyle, aspectRatio, subtitles, duration, avatarId })
       });
 
       const createData = await createRes.json();
@@ -155,6 +157,7 @@ export default function Home() {
           <div className="count">{script.length}/30000</div>
           <div className="select-row"><label><span>♩ &nbsp; குரல் தேர்வு (Voice)</span><select value={voice} onChange={(e) => setVoice(e.target.value)}><option>தமிழ் பெண் குரல்</option><option>தமிழ் ஆண் குரல்</option></select></label><label><span>♟ &nbsp; அவதார் (Presenter)</span><select value={presenter} onChange={(e) => setPresenter(e.target.value)}><option>தமிழ் பெண்</option><option>தமிழ் ஆண்</option></select></label><label><span>▣ &nbsp; வீடியோ ஸ்டைல்</span><select value={visualStyle} onChange={(e) => setVisualStyle(e.target.value)}><option>நவீன</option><option>சினிமாட்டிக்</option><option>கல்வி</option></select></label></div>
           <div className="select-row output-options"><label><span>▤ &nbsp; Format</span><select value={aspectRatio} onChange={(e) => setAspectRatio(e.target.value)}><option value="9:16">9:16 Reels / Shorts</option><option value="16:9">16:9 YouTube</option></select></label><label><span>字幕 &nbsp; Subtitles</span><select value={subtitles ? "on" : "off"} onChange={(e) => setSubtitles(e.target.value === "on")}><option value="on">தமிழ் subtitles ON</option><option value="off">Subtitles OFF</option></select></label><div className="format-note">MP4 output<br />1080p target</div></div>
+          <div className="select-row output-options"><label><span>⏱ &nbsp; Duration</span><select value={duration} onChange={(e) => setDuration(Number(e.target.value))}><option value="15">15 seconds</option><option value="30">30 seconds</option><option value="60">60 seconds</option><option value="90">90 seconds</option><option value="120">120 seconds</option></select></label><label><span>Avatar ID</span><input value={avatarId} onChange={(e) => setAvatarId(e.target.value)} placeholder="Optional HeyGen ID" /></label><div className="format-note">MP4 output<br />1080p target</div></div>
           <button className="create" onClick={createVideo} disabled={loading}>{loading ? "◌ உருவாக்கப்படுகிறது..." : "✦ AI வீடியோ உருவாக்கு"}</button><p className="privacy">∞ &nbsp; இலவசமாக பயன்படுத்தலாம் &nbsp;•&nbsp; எந்த வரம்பும் இல்லை &nbsp;•&nbsp; உங்கள் கணினியின் வேகத்திற்கு ஏற்ப</p>
           {status && <div className="status">{status}</div>}{error && <div className="error">{error}</div>}
         </div>
