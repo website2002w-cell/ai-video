@@ -4,6 +4,8 @@ import { getVideo, saveVideo, updateVideo } from "../../../lib/video-store";
 const API = "https://api.replicate.com/v1";
 const MODEL = process.env.REPLICATE_VIDEO_MODEL || "heygen/video-agent";
 const ASPECT_RATIOS = new Set(["9:16", "16:9"]);
+const DURATIONS = new Set([15, 30, 60, 90, 120]);
+export const runtime = "nodejs";
 
 function authHeaders() {
   const token = process.env.REPLICATE_API_TOKEN;
@@ -22,7 +24,9 @@ export async function POST(request) {
       presenter,
       visualStyle,
       aspectRatio = "9:16",
-      subtitles = true
+      subtitles = true,
+      duration = 30,
+      avatarId = ""
     } = await request.json();
 
     if (!script || typeof script !== "string" || !script.trim()) {
@@ -40,6 +44,11 @@ export async function POST(request) {
       return NextResponse.json({ error: "Aspect ratio must be 9:16 or 16:9." }, { status: 400 });
     }
 
+    const durationSeconds = Number(duration);
+    if (!DURATIONS.has(durationSeconds)) {
+      return NextResponse.json({ error: "Duration must be 15, 30, 60, 90, or 120 seconds." }, { status: 400 });
+    }
+
     const createdAt = new Date().toISOString();
     const id = `video_${Date.now()}`;
     const record = {
@@ -50,6 +59,8 @@ export async function POST(request) {
       visualStyle: visualStyle || "நவீன",
       aspectRatio,
       subtitles: Boolean(subtitles),
+      duration: durationSeconds,
+      avatarId: typeof avatarId === "string" ? avatarId.trim() : "",
       status: "starting",
       videoUrl: "",
       createdAt,
@@ -68,6 +79,7 @@ export async function POST(request) {
       "Use the following exact Tamil script as the narration and preserve its meaning.",
       `Narration: ${record.voice}. Presenter/avatar: ${record.presenter}.`,
       `Visual style: ${record.visualStyle}. Output aspect ratio: ${record.aspectRatio}.`,
+      `Target duration: ${record.duration} seconds.`,
       record.subtitles
         ? "Add accurate Tamil subtitles synchronized to the narration."
         : "Do not add subtitles.",
@@ -78,10 +90,15 @@ export async function POST(request) {
       script.trim()
     ].join("\n");
 
+    const input = { prompt };
+    input.orientation = record.aspectRatio === "16:9" ? "landscape" : "portrait";
+    input.duration_sec = record.duration;
+    if (record.avatarId) input.avatar_id = record.avatarId;
+
     const response = await fetch(`${API}/models/${MODEL}/predictions`, {
       method: "POST",
       headers: authHeaders(),
-      body: JSON.stringify({ input: { prompt } })
+      body: JSON.stringify({ input })
     });
 
     const data = await response.json();
