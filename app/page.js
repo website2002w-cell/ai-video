@@ -9,6 +9,8 @@ export default function Home() {
   const [voice, setVoice] = useState("தமிழ் பெண் குரல்");
   const [presenter, setPresenter] = useState("தமிழ் பெண்");
   const [visualStyle, setVisualStyle] = useState("நவீன");
+  const [aspectRatio, setAspectRatio] = useState("9:16");
+  const [subtitles, setSubtitles] = useState(true);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
@@ -69,7 +71,7 @@ export default function Home() {
       const createRes = await fetch("/api/video", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ script, voice, presenter, visualStyle })
+        body: JSON.stringify({ script, voice, presenter, visualStyle, aspectRatio, subtitles })
       });
 
       const createData = await createRes.json();
@@ -87,7 +89,7 @@ export default function Home() {
 
       setStatus("AI video உருவாகிறது... தயவுசெய்து காத்திருக்கவும்.");
 
-      for (;;) {
+      for (let attempt = 0; attempt < 120; attempt += 1) {
         await new Promise((r) => setTimeout(r, 5000));
 
         const res = await fetch(`/api/video?id=${encodeURIComponent(id)}`);
@@ -101,7 +103,7 @@ export default function Home() {
           setVideoUrl(data.videoUrl);
           setStatus("வீடியோ தயார்! 🎉");
           await loadHistory();
-          break;
+          return;
         }
 
         if (data.status === "failed" || data.status === "canceled") {
@@ -110,6 +112,8 @@ export default function Home() {
 
         setStatus(`AI video உருவாகிறது... (${data.status})`);
       }
+
+      throw new Error("Video generation நேரம் முடிந்தது. History-ல் status பார்க்கவும்.");
     } catch (err) {
       setError(err.message || "ஏதோ தவறு ஏற்பட்டது.");
       setStatus("");
@@ -134,8 +138,9 @@ export default function Home() {
           {fileName && <div className="filename">Uploaded: {fileName}</div>}
           <label className="field-label">⌘ &nbsp; அல்லது ஸ்கிரிப்ட் உரையை எழுதவும்</label>
           <textarea value={script} onChange={(e) => setScript(e.target.value)} placeholder={"தமிழ்நாடு என்பது ஒரு மாநிலம் மட்டுமல்ல,\nஅது ஒரு உணர்வு.\nஇங்கே இருக்கும் பழமையும், கலாசாரமும்,\nபாரம்பரியமும் ஒன்றாக கலந்திருக்கின்றன.\nநாம் அனைவரும் சேர்ந்து தமிழ்நாட்டை மேலும்\nவளர்ச்சியடையச் செய்வோம்."} rows={6} />
-          <div className="count">{script.length}/1000</div>
+          <div className="count">{script.length}/30000</div>
           <div className="select-row"><label><span>♩ &nbsp; குரல் தேர்வு (Voice)</span><select value={voice} onChange={(e) => setVoice(e.target.value)}><option>தமிழ் பெண் குரல்</option><option>தமிழ் ஆண் குரல்</option></select></label><label><span>♟ &nbsp; அவதார் (Presenter)</span><select value={presenter} onChange={(e) => setPresenter(e.target.value)}><option>தமிழ் பெண்</option><option>தமிழ் ஆண்</option></select></label><label><span>▣ &nbsp; வீடியோ ஸ்டைல்</span><select value={visualStyle} onChange={(e) => setVisualStyle(e.target.value)}><option>நவீன</option><option>சினிமாட்டிக்</option><option>கல்வி</option></select></label></div>
+          <div className="select-row output-options"><label><span>▤ &nbsp; Format</span><select value={aspectRatio} onChange={(e) => setAspectRatio(e.target.value)}><option value="9:16">9:16 Reels / Shorts</option><option value="16:9">16:9 YouTube</option></select></label><label><span>字幕 &nbsp; Subtitles</span><select value={subtitles ? "on" : "off"} onChange={(e) => setSubtitles(e.target.value === "on")}><option value="on">தமிழ் subtitles ON</option><option value="off">Subtitles OFF</option></select></label><div className="format-note">MP4 output<br />1080p target</div></div>
           <button className="create" onClick={createVideo} disabled={loading}>{loading ? "◌ உருவாக்கப்படுகிறது..." : "✦ AI வீடியோ உருவாக்கு"}</button><p className="privacy">∞ &nbsp; இலவசமாக பயன்படுத்தலாம் &nbsp;•&nbsp; எந்த வரம்பும் இல்லை &nbsp;•&nbsp; உங்கள் கணினியின் வேகத்திற்கு ஏற்ப</p>
           {status && <div className="status">{status}</div>}{error && <div className="error">{error}</div>}
         </div>
