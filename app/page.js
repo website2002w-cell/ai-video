@@ -23,14 +23,28 @@ export default function Home() {
   }, []);
 
   async function loadHistory() {
-    const response = await fetch("/api/videos");
-    const data = await response.json();
-    if (response.ok) setVideos(data.videos || []);
+    try {
+      const response = await fetch("/api/videos", { cache: "no-store" });
+      const data = await response.json();
+      if (response.ok) setVideos(data.videos || []);
+    } catch {
+      setError("வீடியோ history load செய்ய முடியவில்லை.");
+    }
   }
 
   async function removeVideo(id) {
     const response = await fetch(`/api/videos?id=${encodeURIComponent(id)}`, { method: "DELETE" });
     if (response.ok) setVideos((current) => current.filter((video) => video.id !== id));
+  }
+
+  function openVideo(video) {
+    if (!video.videoUrl) {
+      setError("இந்த video-க்கு MP4 output இன்னும் கிடைக்கவில்லை.");
+      return;
+    }
+    setVideoUrl(video.videoUrl);
+    setStatus("History video preview தயார்.");
+    setShowHistory(false);
   }
 
   async function handleFile(e) {
@@ -128,7 +142,7 @@ export default function Home() {
         <div className="brand"><span className="brand-mark">▶</span><span><strong>Tamil AI Video</strong><small>உங்கள் கதை - AI வீடியோவாக மாறும்</small></span></div>
         <div className="nav-links"><a className="active" href="#studio">⌂ &nbsp; முகப்பு</a><button onClick={() => setShowHistory((value) => !value)}>▣ &nbsp; என் வீடியோக்கள் ({videos.length})</button><a href="#help">? &nbsp; உதவி</a><button>♟ &nbsp; Log Out</button></div>
       </nav>
-      {showHistory && <section className="history card"><div className="history-heading"><h2>என் வீடியோ வரலாறு</h2><button onClick={() => setShowHistory(false)}>மூடு</button></div>{videos.length === 0 ? <p>இன்னும் வீடியோக்கள் இல்லை. உங்கள் முதல் script உருவாக்குங்கள்.</p> : <div className="history-list">{videos.map((video) => <article className="history-item" key={video.id}><div><strong>{video.script.slice(0, 70)}{video.script.length > 70 ? "..." : ""}</strong><small>{new Date(video.createdAt).toLocaleString("ta-IN")} • {video.demo ? "Demo mode" : video.status}</small></div><button onClick={() => removeVideo(video.id)}>நீக்கு</button></article>)}</div>}</section>}
+      {showHistory && <section className="history card"><div className="history-heading"><h2>என் வீடியோ வரலாறு</h2><button onClick={() => setShowHistory(false)}>மூடு</button></div>{videos.length === 0 ? <p>இன்னும் வீடியோக்கள் இல்லை. உங்கள் முதல் script உருவாக்குங்கள்.</p> : <div className="history-list">{videos.map((video) => <article className="history-item" key={video.id}><div><strong>{video.script.slice(0, 70)}{video.script.length > 70 ? "..." : ""}</strong><small>{new Date(video.createdAt).toLocaleString("ta-IN")} • {video.demo ? "Demo mode" : video.status}</small></div><div className="history-actions"><button onClick={() => openVideo(video)} disabled={!video.videoUrl}>திறக்க</button><button onClick={() => removeVideo(video.id)}>நீக்கு</button></div></article>)}</div>}</section>}
       <section className="hero"><h1>தமிழ் ஸ்கிரிப்ட்-ஐ <em>AI வீடியோவாக</em> மாற்றுங்கள்</h1><p>உங்கள் எழுத்து - உங்கள் குரல் - உங்கள் வீடியோ</p></section>
       <section className="studio" id="studio">
         <div className="card editor-card">
