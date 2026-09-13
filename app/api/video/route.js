@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getVideo, saveVideo, updateVideo } from "../../../lib/video-store";
 
 const API = "https://api.replicate.com/v1";
+const MODEL = process.env.REPLICATE_VIDEO_MODEL || "heygen/video-agent";
 
 function authHeaders() {
   const token = process.env.REPLICATE_API_TOKEN;
@@ -14,7 +15,14 @@ function authHeaders() {
 
 export async function POST(request) {
   try {
-    const { script, voice, presenter, visualStyle } = await request.json();
+    const {
+      script,
+      voice,
+      presenter,
+      visualStyle,
+      aspectRatio = "9:16",
+      subtitles = true
+    } = await request.json();
 
     if (!script || typeof script !== "string") {
       return NextResponse.json({ error: "Script is required." }, { status: 400 });
@@ -35,6 +43,8 @@ export async function POST(request) {
       voice: voice || "தமிழ் பெண் குரல்",
       presenter: presenter || "தமிழ் பெண்",
       visualStyle: visualStyle || "நவீன",
+      aspectRatio,
+      subtitles: Boolean(subtitles),
       status: "starting",
       videoUrl: "",
       createdAt,
@@ -49,20 +59,24 @@ export async function POST(request) {
     // The video-agent model can create a complete video from a text prompt.
     // We explicitly tell it to preserve the supplied Tamil script as narration/content.
     const prompt = [
-      "Create a polished short-form video using the following exact Tamil script.",
-      "Keep the narration/content faithful to the supplied script.",
-      "Use natural Tamil narration if supported, relevant visuals, clean editing, subtitles when appropriate, and a professional social-media style.",
+      "Create a finished MP4 video, not a storyboard or image sequence.",
+      "Use the following exact Tamil script as the narration and preserve its meaning.",
+      `Narration: ${record.voice}. Presenter/avatar: ${record.presenter}.`,
+      `Visual style: ${record.visualStyle}. Output aspect ratio: ${record.aspectRatio}.`,
+      record.subtitles
+        ? "Add accurate Tamil subtitles synchronized to the narration."
+        : "Do not add subtitles.",
+      "Automatically select relevant images, scenes, transitions, and background music.",
+      "Render a polished social-media-ready video with natural Tamil pronunciation.",
       "",
       "TAMIL SCRIPT:",
       script.trim()
     ].join("\n");
 
-    const response = await fetch(`${API}/models/heygen/video-agent/predictions`, {
+    const response = await fetch(`${API}/models/${MODEL}/predictions`, {
       method: "POST",
       headers: authHeaders(),
-      body: JSON.stringify({
-        input: { prompt }
-      })
+      body: JSON.stringify({ input: { prompt } })
     });
 
     const data = await response.json();
