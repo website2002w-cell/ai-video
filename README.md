@@ -16,6 +16,7 @@ Script `.txt` upload/paste செய்து AI video உருவாக்க�
 - Delete saved video records
 - 9:16 Reels/Shorts or 16:9 YouTube output
 - Tamil subtitle and presenter instructions sent to the video model
+- 15–120 second duration and optional HeyGen avatar ID
 - API token browser-ல் expose ஆகாது
 
 ## 1. Requirements
